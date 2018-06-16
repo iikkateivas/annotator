@@ -1,0 +1,37 @@
+from tkinter import *
+
+root = Tk()
+
+content = Frame(root)
+# If you want rid of border highlight, remove relief
+frame = Frame(content, borderwidth=1, relief="sunken", width=1600, height=100)
+frame2 = Frame(content, borderwidth=1, relief="sunken", width=1600, height=1200)
+frame3 = Frame(content, borderwidth=1, relief="sunken", width=500, height=1300)
+namelbl = Label(content, text="Name")
+name = Entry(content)
+
+onevar = BooleanVar()
+twovar = BooleanVar()
+threevar = BooleanVar()
+onevar.set(True)
+twovar.set(False)
+threevar.set(True)
+
+one = Checkbutton(content, text="One", variable=onevar, onvalue=True)
+two = Checkbutton(content, text="Two", variable=twovar, onvalue=True)
+three = Checkbutton(content, text="Three", variable=threevar, onvalue=True)
+ok = Button(content, text="Okay")
+cancel = Button(content, text="Cancel")
+
+content.grid(column=0, row=0)
+frame.grid(column=0, row=0, columnspan=3, rowspan=1)
+frame2.grid(column=0, row=1, columnspan=3, rowspan=1)
+frame3.grid(column=3, row=0, columnspan=1, rowspan=3)
+
+# namelbl.grid(column=3, row=0, columnspan=2)
+# name.grid(column=3, row=1, columnspan=2)
+# one.grid(column=0, row=3, columnspan=3)
+# ok.grid(column=3, row=3)
+# cancel.grid(column=4, row=3)
+
+root.mainloop()
