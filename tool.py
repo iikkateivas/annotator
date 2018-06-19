@@ -9,6 +9,7 @@ border_size = 1
 frame_xdim = 1600
 frame_ydim = 1200
 
+
 class LabelTool():
     def __init__(self, master):
         # set up the main frame
@@ -24,6 +25,10 @@ class LabelTool():
         self.image_y = 1
         self.scale_ratio = 1
 
+        # current image
+        self.current_image_w = None
+        self.current_image_h = None
+
         # other members
         self.images = []
         self.image_ind = 0
@@ -34,7 +39,13 @@ class LabelTool():
         self.rect = None
         self.start_x = None
         self.start_y = None
+        self.end_x = None
+        self.end_y = None
         self.x = self.y = 0
+        self.selected_label = None
+        self.rects = []
+
+        self.format_yolo = IntVar()
 
         # If you want rid of border highlight, remove relief
         self.frame_top = Frame(self.master, borderwidth=border_size, relief="sunken", width=.8*frame_xdim, height=.05*frame_ydim)
@@ -66,8 +77,26 @@ class LabelTool():
         self.image_canvas.bind("<B1-Motion>", self.on_move_press)
         self.image_canvas.bind("<ButtonRelease-1>", self.on_button_release)
 
-        self.label_list = Listbox(self.frame_right, height=10, width=20)
-        self.label_list.place(relx=.5, rely=.1, anchor="c")
+        self.labels_label = Label(self.frame_right, text="Annotations")
+        self.labels_label.place(relx=.5, rely=.12, anchor="c")
+        self.label_list = Listbox(self.frame_right, height=20, width=30)
+        self.label_list.place(relx=.5, rely=.2, anchor="c")
+        self.label_list.bind("<<ListboxSelect>>", self.get_annotation)
+
+        self.button_delete = Button(self.frame_right, text="Delete", command=self.delete_annotation)
+        self.button_delete.place(relx=.5, rely=.35, anchor="center")
+
+        self.class_label = Label(self.frame_right, text="Class")
+        self.class_label.place(relx=.38, rely=.05, anchor="c")
+        self.class_entry = Text(self.frame_right, height=1, width=4)
+        self.class_entry.place(relx=.5, rely=.05, anchor="c")
+
+        # Checkboxes for annotation format
+        self.check_yolo_label = Label(self.frame_top, text="Format")
+        self.check_yolo_label.place(relx=.05, rely=.5, anchor="c")
+        self.check_yolo = Checkbutton(self.frame_top, text="YOLOv2", variable=self.format_yolo, onvalue=1, offvalue=0)
+        self.check_yolo.place(relx=.1, rely=.5, anchor="c")
+        self.check_yolo.select()
 
     def show_image(self, path):
         img = Image.open(path)
@@ -91,6 +120,16 @@ class LabelTool():
         self.tkimg = ImageTk.PhotoImage(img)
         self.image_canvas.config(width=self.tkimg.width(), height=self.tkimg.height(), scrollregion=(0, 0, self.tkimg.width(), self.tkimg.height()))
         self.image_canvas.create_image(0, 0, image=self.tkimg, anchor=NW)
+
+        # set current image size for annotation calculations
+        self.current_image_w = self.tkimg.width()
+        self.current_image_h = self.tkimg.height()
+
+        # initialize label stuff
+        self.selected_label = None
+        self.rects = []
+        self.label_list.delete(0, END)
+
         print(self.tkimg.width(), self.tkimg.height())
 
     def show_text(self, content):
@@ -116,33 +155,55 @@ class LabelTool():
             self.show_image(self.images[self.image_ind])
 
     def on_button_press(self, event):
+        # always start a new rectangle on button press
+        self.rect = None
         # save mouse drag start position
         self.start_x = self.image_canvas.canvasx(event.x)
         self.start_y = self.image_canvas.canvasy(event.y)
 
         # create rectangle if not yet exist
         if not self.rect:
-            self.rect = self.image_canvas.create_rectangle(self.x, self.y, 1, 1, outline='red')
+            self.rect = self.image_canvas.create_rectangle(self.x, self.y, 1, 1, outline='red', width=2)
 
     def on_move_press(self, event):
-        curX = self.image_canvas.canvasx(event.x)
-        curY = self.image_canvas.canvasy(event.y)
-
-        w, h = self.image_canvas.winfo_width(), self.image_canvas.winfo_height()
-        if event.x > 0.9*w:
-            self.image_canvas.xview_scroll(1, 'units')
-        elif event.x < 0.1*w:
-            self.image_canvas.xview_scroll(-1, 'units')
-        if event.y > 0.9*h:
-            self.image_canvas.yview_scroll(1, 'units')
-        elif event.y < 0.1*h:
-            self.image_canvas.yview_scroll(-1, 'units')
+        self.end_x = self.image_canvas.canvasx(event.x)
+        self.end_y = self.image_canvas.canvasy(event.y)
 
         # expand rectangle as you drag the mouse
-        self.image_canvas.coords(self.rect, self.start_x, self.start_y, curX, curY)
+        self.image_canvas.coords(self.rect, self.start_x, self.start_y, self.end_x, self.end_y)
 
     def on_button_release(self, event):
-        pass
+        print(self.start_x, self.start_y, self.end_x, self.end_y)
+        label_string = str(int(self.start_x)) + ", " + str(int(self.start_y)) + ", " + str(int(self.end_x)) + ", " + str(int(self.end_y))
+        self.label_list.insert(END, label_string)
+        self.rects.append(self.rect)
+        self.get_yolo_format()
+
+    def get_annotation(self, event):
+        w = event.widget
+        self.selected_label = int(w.curselection()[0])
+
+    def delete_annotation(self):
+        if self.selected_label is None:
+            return
+        # remove from the listbox
+        self.label_list.delete(self.selected_label)
+        # remove from canvas
+        self.image_canvas.delete(self.rects[self.selected_label])
+        # remove from the list
+        self.rects.remove(self.rects[self.selected_label])
+        self.selected_label = None
+
+    def get_yolo_format(self):
+        length_x = self.end_x - self.start_x
+        length_y = self.end_y - self.start_y
+        center_x = (self.start_x + length_x / 2) / self.current_image_w
+        center_y = (self.start_y + length_y / 2) / self.current_image_h
+        length_x_per = length_x / self.current_image_w
+        length_y_per = length_y / self.current_image_h
+        yolo_string = str(center_x) + ", " + str(center_y) + ", " + str(length_x_per) + ", " + str(length_y_per)
+        print(yolo_string)
+        return yolo_string
 
 
 if __name__ == '__main__':
