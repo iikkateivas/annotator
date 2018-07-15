@@ -46,7 +46,7 @@ class LabelTool:
         self.x = self.y = 0
         self.selected_label = None
         self.rects = []
-        self.current_class = StringVar(value="1")
+        self.current_class = StringVar(value="0")
 
         self.format_yolo = IntVar()
 
@@ -69,8 +69,14 @@ class LabelTool:
         self.path_entry = Text(self.frame_top, height=1, width=60)
         self.path_entry.place(relx=.5, rely=.5, anchor="c")
 
-        self.button_next = Button(self.frame_right, text="Done", width=10, height=4, command=self.next_image)
-        self.button_next.place(relx=.5, rely=.95, anchor="center")
+        self.button_done = Button(self.frame_right, text="Done", width=10, height=4, command=self.next_image)
+        self.button_done.place(relx=.5, rely=.80, anchor="center")
+
+        self.button_next = Button(self.frame_right, text="Next", width=5, height=2, command=self.next_image_nosave)
+        self.button_next.place(relx=.7, rely=.95, anchor="center")
+
+        self.button_prev = Button(self.frame_right, text="Prev", width=5, height=2, command=self.prev_image_nosave)
+        self.button_prev.place(relx=.3, rely=.95, anchor="center")
 
         self.image_canvas = Canvas(self.frame_image, width=self.image_x, height=self.image_y, cursor='tcross')
         self.image_canvas.grid(row=0, column=0, columnspan=2, rowspan=2, sticky=W+N)
@@ -93,6 +99,9 @@ class LabelTool:
         self.class_label.place(relx=.38, rely=.05, anchor="c")
         self.class_entry = Entry(self.frame_right, textvariable=self.current_class)
         self.class_entry.place(relx=.5, rely=.05, anchor="c", width=30)
+
+        # self.no_images_label = Label(self.frame_image, text="No images left")
+        # self.no_images_label.place(relx=.5, rely=.5, anchor="c")
 
         # Checkboxes for annotation format
         self.check_yolo_label = Label(self.frame_top, text="Format")
@@ -179,6 +188,10 @@ class LabelTool:
             os.remove(self.fn)
         f = open(self.fn, "w")
         for label in self.label_list.get(0, END):
+            # if the label is previously inserted, don't add extra newline
+            if label[-1:] == "\n":
+                f.write(str(label))
+                continue
             f.write(str(label + "\n"))
         f.close()
 
@@ -203,8 +216,20 @@ class LabelTool:
         # save current annotations if any
         self.save_annotations()
 
-        self.image_ind = self.image_ind + 1
-        if self.image_ind < len(self.images):
+        if self.image_ind < len(self.images) - 1:
+            self.image_ind = self.image_ind + 1
+            self.show_image(self.images[self.image_ind])
+        #else:
+
+
+    def next_image_nosave(self):
+        if self.image_ind < len(self.images) - 1:
+            self.image_ind = self.image_ind + 1
+            self.show_image(self.images[self.image_ind])
+
+    def prev_image_nosave(self):
+        if self.image_ind > 0:
+            self.image_ind = self.image_ind - 1
             self.show_image(self.images[self.image_ind])
 
     def on_button_press(self, event):
@@ -234,7 +259,8 @@ class LabelTool:
 
     def get_annotation(self, event):
         w = event.widget
-        self.selected_label = int(w.curselection()[0])
+        if len(w.curselection()) > 0:
+            self.selected_label = int(w.curselection()[0])
 
     def delete_annotation(self):
         if self.selected_label is None:
