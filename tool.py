@@ -71,6 +71,8 @@ class LabelTool:
 
         self.button_done = Button(self.frame_right, text="Done", width=10, height=4, command=self.next_image)
         self.button_done.place(relx=.5, rely=.80, anchor="center")
+        self.button_done.focus_set()
+        self.button_done.bind("<Return>", self.next_image)
 
         self.button_next = Button(self.frame_right, text="Next", width=5, height=2, command=self.next_image_nosave)
         self.button_next.place(relx=.7, rely=.95, anchor="center")
@@ -212,7 +214,7 @@ class LabelTool:
             self.show_image(self.images[self.image_ind])
             self.show_text(self.current_path)
 
-    def next_image(self):
+    def next_image(self, event=None):
         # save current annotations if any
         self.save_annotations()
 
