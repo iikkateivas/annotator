@@ -2,12 +2,13 @@ from tkinter import *
 from tkinter import filedialog
 from PIL import Image, ImageTk
 import os, os.path
-import cv2 as cv
 
 # debug
 border_size = 1
 frame_xdim = 1600
 frame_ydim = 1200
+
+# pyinstaller packaging: pyinstaller tool.py --onefile --hidden-import='PIL._tkinter_finder'
 
 
 class LabelTool:
